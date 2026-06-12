@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Wand2, Video, Palette, Users, ShoppingBag, BarChart2, Zap, Globe, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,8 +86,6 @@ const features = [
 ];
 
 export default function FeaturesSection() {
-  const [hovered, setHovered] = useState<number | null>(null);
-
   return (
     <section className="py-24 bg-background relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-primary-500/0 to-primary-500/50" />
@@ -111,17 +108,12 @@ export default function FeaturesSection() {
 
         {/* Feature Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, i) => {
+          {features.map((feature) => {
             const Icon = feature.icon;
             return (
               <div
                 key={feature.title}
-                onMouseEnter={() => setHovered(i)}
-                onMouseLeave={() => setHovered(null)}
-                className={cn(
-                  "group relative rounded-2xl border border-border bg-card overflow-hidden cursor-pointer transition-all duration-300",
-                  hovered === i ? "shadow-card-hover scale-[1.02] border-primary-500/30" : "hover:shadow-card"
-                )}
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-card-hover hover:scale-[1.02] hover:border-primary-500/30"
               >
                 {/* Preview Image */}
                 <div className="relative h-40 overflow-hidden">
@@ -154,8 +146,8 @@ export default function FeaturesSection() {
 
                 {/* Hover Glow */}
                 <div className={cn(
-                  "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none",
-                  `bg-gradient-to-br ${feature.gradient} opacity-[0.03]`
+                  "absolute inset-0 opacity-0 group-hover:opacity-[0.04] transition-opacity duration-300 pointer-events-none bg-gradient-to-br",
+                  feature.gradient
                 )} />
               </div>
             );

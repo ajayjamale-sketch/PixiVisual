@@ -111,27 +111,29 @@ export default function Navbar() {
 
                 {/* Mega Menu */}
                 {link.label === "Features" && activeMega === "features" && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[480px] bg-popover border border-border rounded-2xl shadow-glass-lg p-4 grid grid-cols-2 gap-2 z-50 animate-fade-in-up">
-                    {megaMenuFeatures.map((item) => (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition-all group"
-                      >
-                        <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", item.dot)} />
-                        <div>
-                          <p className={cn("text-sm font-semibold", item.color)}>{item.label}</p>
-                          <p className="text-xs text-muted-foreground">{item.desc}</p>
-                        </div>
-                      </Link>
-                    ))}
-                    <div className="col-span-2 pt-2 border-t border-border">
-                      <Link
-                        to="/features"
-                        className="text-xs text-primary-500 hover:underline flex items-center gap-1 font-medium"
-                      >
-                        See all features <ChevronDown className="w-3 h-3 -rotate-90" />
-                      </Link>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 animate-fade-in-up">
+                    <div className="w-[480px] bg-popover border border-border rounded-2xl shadow-glass-lg p-4 grid grid-cols-2 gap-2">
+                      {megaMenuFeatures.map((item) => (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition-all group"
+                        >
+                          <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0", item.dot)} />
+                          <div>
+                            <p className={cn("text-sm font-semibold", item.color)}>{item.label}</p>
+                            <p className="text-xs text-muted-foreground">{item.desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                      <div className="col-span-2 pt-2 border-t border-border">
+                        <Link
+                          to="/features"
+                          className="text-xs text-primary-500 hover:underline flex items-center gap-1 font-medium"
+                        >
+                          See all features <ChevronDown className="w-3 h-3 -rotate-90" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )}
