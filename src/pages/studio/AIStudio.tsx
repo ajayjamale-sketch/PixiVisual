@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Wand2, Image, Sparkles, Send, Heart, Download, RefreshCw,
   History, Star, Clock, Sliders, ChevronDown, Zap
@@ -20,7 +20,7 @@ const sampleOutputs = [
   "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop",
 ];
 
-const history = [
+const initialHistory = [
   { prompt: "Vibrant summer festival poster with tropical colors", img: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=80&h=80&fit=crop", isFavorite: true },
   { prompt: "Minimalist tech startup logo with purple gradient", img: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=80&h=80&fit=crop", isFavorite: false },
   { prompt: "Abstract AI-themed banner for SaaS product", img: "https://images.unsplash.com/photo-1559526324-593bc073d938?w=80&h=80&fit=crop", isFavorite: true },
@@ -28,6 +28,7 @@ const history = [
 
 export default function AIStudio() {
   const { type } = useParams();
+  const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("Photorealistic");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -35,6 +36,7 @@ export default function AIStudio() {
   const [activeTab, setActiveTab] = useState<"generate" | "history" | "favorites">("generate");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const [selectedOutput, setSelectedOutput] = useState(0);
+  const [historyList, setHistoryList] = useState(initialHistory);
 
   const activeCapability = AI_CAPABILITIES.find((c) => c.id === (type || "image")) ?? AI_CAPABILITIES[0];
 
@@ -44,16 +46,73 @@ export default function AIStudio() {
     await new Promise((r) => setTimeout(r, 2500));
     setIsGenerating(false);
     setGenerated(true);
+    
+    // Add dynamically to history
+    const newGen = {
+      prompt: `${prompt} (${selectedStyle})`,
+      img: sampleOutputs[Math.floor(Math.random() * sampleOutputs.length)],
+      isFavorite: false
+    };
+    setHistoryList(prev => [newGen, ...prev]);
     toast.success("4 variations generated successfully!");
   };
 
+  const handleEnhancePrompt = () => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a basic prompt to enhance first.");
+      return;
+    }
+    const enhancements = [
+      ", highly detailed digital art, trending on artstation, 8k resolution, cinematic lighting, dramatic atmosphere",
+      ", flat vector graphic, sleek minimalist design, modern typography layout, high contrast color palette",
+      ", studio lighting, detailed reflection, award winning photography, sharp focus, 50mm lens",
+      ", 3D render octane, isometric view, colorful clay style, soft shadows, polished surface, game asset design"
+    ];
+    const modifier = enhancements[Math.floor(Math.random() * enhancements.length)];
+    setPrompt(prev => prev.trim() + modifier);
+    toast.success("Prompt enhanced successfully!");
+  };
+
+  const handleDownload = () => {
+    const imgUrl = sampleOutputs[selectedOutput];
+    // We fetch and convert it to a blob or just download via anchor if possible. Unsplash allows direct URL download.
+    const link = document.createElement("a");
+    link.href = imgUrl;
+    link.download = `pixivisual-${activeCapability.id}-${selectedOutput + 1}.jpg`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Asset download started!");
+  };
+
+  const handleCustomizeInEditor = () => {
+    const imgUrl = sampleOutputs[selectedOutput];
+    navigate("/editor", {
+      state: {
+        backgroundImage: imgUrl,
+        title: prompt || "AI Studio Creation"
+      }
+    });
+  };
+
   const toggleFavorite = (i: number) => {
+    const imgUrl = sampleOutputs[i];
     setFavorites((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) {
+        next.delete(i);
+        // Remove from history favorites
+        setHistoryList(hl => hl.map(item => item.img === imgUrl ? { ...item, isFavorite: false } : item));
+        toast.success("Removed from favorites");
+      } else {
+        next.add(i);
+        // Add to history favorites
+        setHistoryList(hl => hl.map(item => item.img === imgUrl ? { ...item, isFavorite: true } : item));
+        toast.success("Added to favorites");
+      }
       return next;
     });
-    toast.success(favorites.has(i) ? "Removed from favorites" : "Added to favorites");
   };
 
   return (
@@ -119,7 +178,7 @@ export default function AIStudio() {
                 />
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-muted-foreground">{prompt.length}/500</span>
-                  <button className="text-xs text-primary-500 hover:underline flex items-center gap-1">
+                  <button type="button" onClick={handleEnhancePrompt} className="text-xs text-primary-500 hover:underline flex items-center gap-1">
                     <Zap className="w-3 h-3" /> Enhance prompt
                   </button>
                 </div>
@@ -187,7 +246,7 @@ export default function AIStudio() {
           {activeTab === "history" && (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground mb-3">Your recent generations</p>
-              {history.map((item, i) => (
+              {historyList.map((item, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary-500/30 cursor-pointer transition-all">
                   <img src={item.img} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -206,9 +265,30 @@ export default function AIStudio() {
           )}
 
           {activeTab === "favorites" && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              <Heart className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p>Your favorited generations appear here</p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground mb-3">Your favorited generations</p>
+              {historyList.filter((item) => item.isFavorite).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <Heart className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>Your favorited generations appear here</p>
+                </div>
+              ) : (
+                historyList.filter((item) => item.isFavorite).map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary-500/30 cursor-pointer transition-all">
+                    <img src={item.img} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground truncate">{item.prompt}</p>
+                      <button
+                        onClick={() => setPrompt(item.prompt)}
+                        className="text-xs text-primary-500 hover:underline mt-1"
+                      >
+                        Use this prompt
+                      </button>
+                    </div>
+                    <Heart className="w-3.5 h-3.5 text-secondary-500 fill-secondary-500 flex-shrink-0" />
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -254,7 +334,7 @@ export default function AIStudio() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                   <button
-                    onClick={() => toast.success("Downloading...")}
+                    onClick={handleDownload}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-black text-xs font-semibold hover:bg-primary-500 hover:text-white transition-all"
                   >
                     <Download className="w-3.5 h-3.5" /> Download
@@ -265,12 +345,12 @@ export default function AIStudio() {
                   >
                     <Heart className={cn("w-3.5 h-3.5", favorites.has(selectedOutput) ? "fill-secondary-500 text-secondary-500" : "text-white")} />
                   </button>
-                  <Link
-                    to="/editor"
+                  <button
+                    onClick={handleCustomizeInEditor}
                     className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition-all"
                   >
                     Edit in Canvas
-                  </Link>
+                  </button>
                 </div>
               </div>
 
@@ -300,7 +380,7 @@ export default function AIStudio() {
                   <RefreshCw className="w-3.5 h-3.5" /> New Generation
                 </button>
                 <button
-                  onClick={() => toast.success("Opening in editor...")}
+                  onClick={handleCustomizeInEditor}
                   className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white text-sm font-semibold hover:shadow-glow transition-all"
                 >
                   <Sliders className="w-3.5 h-3.5" /> Customize in Editor

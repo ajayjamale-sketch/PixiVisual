@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Plus, Image, Share2, TrendingUp, Eye, Wand2, Calendar,
   ArrowRight, BarChart2, Trash2, Edit3, Download, Clock,
-  CheckCircle, Play, Star, Filter, Search, Grid, List
+  CheckCircle, Play, Star, Filter, Search, Grid, List, X
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
@@ -35,11 +35,15 @@ const COLORS = ["#7C3AED", "#EC4899", "#2563EB", "#22C55E"];
 
 export default function ContentCreatorDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"overview" | "projects" | "calendar" | "analytics">("overview");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "published" | "draft">("all");
   const [projects, setProjects] = useState(recentProjects);
+  const [calendarTasks, setCalendarTasks] = useState(calendarItems);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [newCalendarTask, setNewCalendarTask] = useState({ day: "Mon", task: "", time: "12:00 PM" });
 
   const stats = [
     { label: "Total Designs", value: "248", change: "+18%", trend: "up" as const, color: "bg-primary-500" },
@@ -62,6 +66,51 @@ export default function ContentCreatorDashboard() {
   const publishProject = (id: number) => {
     setProjects((prev) => prev.map((p) => p.id === id ? { ...p, status: "published" } : p));
     toast.success("Project published!");
+  };
+
+  const handleEditProject = (project: typeof recentProjects[0]) => {
+    navigate("/editor", {
+      state: {
+        backgroundImage: project.thumb,
+        title: project.title
+      }
+    });
+    toast.success(`Loaded project "${project.title}" in editor!`);
+  };
+
+  const handleDownloadProject = (project: typeof recentProjects[0]) => {
+    const link = document.createElement("a");
+    link.href = project.thumb;
+    link.download = `${project.title.toLowerCase().replace(/\s/g, "-")}.png`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Started download of "${project.title}"!`);
+  };
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCalendarTask.task.trim()) {
+      toast.error("Please enter a task description");
+      return;
+    }
+    const newTask = {
+      day: newCalendarTask.day,
+      task: newCalendarTask.task,
+      time: newCalendarTask.time,
+      done: false
+    };
+    setCalendarTasks(prev => [...prev, newTask]);
+    setNewCalendarTask({ day: "Mon", task: "", time: "12:00 PM" });
+    setShowTaskModal(false);
+    toast.success("Task scheduled on calendar!");
+  };
+
+  const toggleTaskDone = (taskText: string) => {
+    setCalendarTasks(prev => prev.map(t => t.task === taskText ? { ...t, done: !t.done } : t));
+    const task = calendarTasks.find(t => t.task === taskText);
+    toast.success(task?.done ? "Marked as scheduled" : "Marked as completed!");
   };
 
   const tabs = [
@@ -269,7 +318,7 @@ export default function ContentCreatorDashboard() {
                       {project.status}
                     </span>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
-                      <button onClick={() => toast.info("Opening editor...")} className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors">
+                      <button onClick={() => handleEditProject(project)} className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors">
                         <Edit3 className="w-3 h-3 text-gray-700" />
                       </button>
                       <button onClick={() => deleteProject(project.id)} className="p-1.5 bg-white/90 rounded-lg hover:bg-red-50 transition-colors">
@@ -330,10 +379,10 @@ export default function ContentCreatorDashboard() {
                       <td className="p-4 text-muted-foreground hidden lg:table-cell text-xs">{project.date}</td>
                       <td className="p-4">
                         <div className="flex gap-2">
-                          <button onClick={() => toast.info("Opening editor...")} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                          <button onClick={() => handleEditProject(project)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => toast.success("Downloading...")} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                          <button onClick={() => handleDownloadProject(project)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                             <Download className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => deleteProject(project.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500">
@@ -361,13 +410,13 @@ export default function ContentCreatorDashboard() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg">Content Calendar — This Week</h2>
-            <button onClick={() => toast.success("New task added to calendar")} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover-glow transition-all">
+            <button onClick={() => setShowTaskModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover-glow transition-all">
               <Plus className="w-4 h-4" /> Add Task
             </button>
           </div>
           <div className="grid gap-3">
-            {calendarItems.map((item) => (
-              <div key={item.day} className={cn("flex items-center gap-4 p-4 rounded-2xl border transition-all hover-lift", item.done ? "border-success/30 bg-success/5" : "border-border bg-card hover:border-primary-500/30")}>
+            {calendarTasks.map((item, idx) => (
+              <div key={idx} className={cn("flex items-center gap-4 p-4 rounded-2xl border transition-all hover-lift", item.done ? "border-success/30 bg-success/5" : "border-border bg-card hover:border-primary-500/30")}>
                 <div className="w-12 text-center flex-shrink-0">
                   <p className="text-xs text-muted-foreground">{item.day}</p>
                   <p className="text-sm font-mono font-semibold">{item.time.split(" ")[0]}</p>
@@ -377,16 +426,83 @@ export default function ContentCreatorDashboard() {
                   <p className={cn("font-semibold text-sm", item.done && "line-through text-muted-foreground")}>{item.task}</p>
                   <p className="text-xs text-muted-foreground">{item.done ? "Completed" : "Scheduled"}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   {!item.done && (
                     <Link to="/editor" className="px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-500 text-xs font-medium hover:bg-primary-500 hover:text-white transition-all">
                       Create
                     </Link>
                   )}
-                  {item.done && <CheckCircle className="w-5 h-5 text-success" />}
+                  <button
+                    onClick={() => toggleTaskDone(item.task)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-success"
+                    title={item.done ? "Mark as active" : "Mark as completed"}
+                  >
+                    {item.done ? (
+                      <CheckCircle className="w-5 h-5 text-success" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-border hover:border-success transition-colors" />
+                    )}
+                  </button>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Task Creation Modal */}
+      {showTaskModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowTaskModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="font-heading font-bold text-lg mb-4">Add Calendar Task</h3>
+            <form onSubmit={handleAddTask} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Day of the Week</label>
+                <select
+                  value={newCalendarTask.day}
+                  onChange={(e) => setNewCalendarTask(prev => ({ ...prev, day: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Task Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Instagram Video post"
+                  value={newCalendarTask.task}
+                  onChange={(e) => setNewCalendarTask(prev => ({ ...prev, task: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Time</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 10:00 AM"
+                  value={newCalendarTask.time}
+                  onChange={(e) => setNewCalendarTask(prev => ({ ...prev, time: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-primary-500 text-white font-semibold text-sm hover-glow transition-all"
+              >
+                Add Task
+              </button>
+            </form>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DollarSign, Star, Clock, CheckCircle, Plus, ArrowRight,
   Edit3, Trash2, X, Search, Calendar, TrendingUp, Send, MessageSquare
@@ -39,6 +39,7 @@ const reviews = [
 ];
 
 export default function FreelancerDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"overview" | "orders" | "portfolio" | "reviews">("overview");
   const [orders, setOrders] = useState(initialOrders);
   const [showNewOrder, setShowNewOrder] = useState(false);
@@ -290,7 +291,11 @@ export default function FreelancerDashboard() {
                 <div className="relative">
                   <img src={item.img} alt={item.title} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                    <button onClick={() => toast.info("Opening editor...")} className="p-2 bg-white rounded-xl hover:bg-primary-500 hover:text-white transition-all">
+                    <button 
+                      onClick={() => navigate("/editor", { state: { title: item.title, backgroundImage: item.img } })} 
+                      className="p-2 bg-white rounded-xl hover:bg-primary-500 hover:text-white transition-all"
+                      title="Edit in canvas"
+                    >
                       <Edit3 className="w-4 h-4" />
                     </button>
                   </div>

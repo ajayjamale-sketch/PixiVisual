@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { Newspaper, Award, Download, ArrowRight, ExternalLink, Mail } from "lucide-react";
+import { Newspaper, Award, Download, ArrowRight, ExternalLink, Mail, X, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const pressReleases = [
   {
@@ -43,6 +45,27 @@ const brandAssets = [
 ];
 
 export default function PressPage() {
+  const [readingPress, setReadingPress] = useState<typeof pressReleases[0] | null>(null);
+  const [downloadingAsset, setDownloadingAsset] = useState<string | null>(null);
+
+  const handleDownload = (assetName: string) => {
+    setDownloadingAsset(assetName);
+    setTimeout(() => {
+      const element = document.createElement("a");
+      const file = new Blob([`Mock data for ${assetName} download from PixiVisual Press Kit.`], { type: 'text/plain' });
+      element.href = URL.createObjectURL(file);
+      element.download = assetName.includes("(") 
+        ? assetName.split(" (")[0].replace(/\s+/g, "_").toLowerCase() + "." + assetName.split("(")[1].replace(")", "").toLowerCase() 
+        : assetName.toLowerCase() + ".zip";
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      
+      toast.success(`${assetName} downloaded successfully!`);
+      setDownloadingAsset(null);
+    }, 1200);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-20 max-w-5xl">
@@ -85,7 +108,11 @@ export default function PressPage() {
           <h2 className="font-heading font-bold text-2xl mb-6">Press Releases</h2>
           <div className="space-y-4">
             {pressReleases.map((pr) => (
-              <div key={pr.title} className="bg-card border border-border rounded-2xl p-5 hover:border-primary-500/30 hover-lift transition-all group">
+              <div 
+                key={pr.title} 
+                onClick={() => setReadingPress(pr)}
+                className="bg-card border border-border rounded-2xl p-5 hover:border-primary-500/30 hover-lift transition-all group cursor-pointer"
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -130,14 +157,57 @@ export default function PressPage() {
                   <p className="text-sm font-semibold">{asset.name}</p>
                   <p className="text-xs text-muted-foreground">{asset.format} · {asset.size}</p>
                 </div>
-                <button className="flex items-center gap-1.5 text-xs text-primary-500 hover:underline">
-                  <Download className="w-3.5 h-3.5" /> Download
+                <button 
+                  onClick={() => handleDownload(asset.name)}
+                  disabled={downloadingAsset !== null}
+                  className="flex items-center gap-1.5 text-xs text-primary-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloadingAsset === asset.name ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" /> Download
+                    </>
+                  )}
                 </button>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Press Release Modal */}
+      {readingPress && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setReadingPress(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg bg-background/80"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary-500/10 text-primary-500 font-semibold">{readingPress.tag}</span>
+              <span className="text-xs text-muted-foreground">{readingPress.date}</span>
+            </div>
+            <h3 className="font-heading font-bold text-xl mb-4">{readingPress.title}</h3>
+            <div className="prose prose-sm dark:prose-invert text-muted-foreground leading-relaxed space-y-3">
+              <p className="font-semibold text-foreground">FOR IMMEDIATE RELEASE</p>
+              <p>
+                <strong>{readingPress.source.toUpperCase()} — </strong> PixiVisual, the leading platform in AI-assisted creative software, is excited to publish new updates regarding {readingPress.title.toLowerCase()}.
+              </p>
+              <p>
+                This development represents a major step forward for our ecosystem. We remain committed to helping businesses, creators, and developers build beautiful design workflows.
+              </p>
+              <p>
+                For further press inquiries or developer details, please reach out to our media relations department at <a href="mailto:press@pixivisual.ai" className="text-primary-500 hover:underline">press@pixivisual.ai</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

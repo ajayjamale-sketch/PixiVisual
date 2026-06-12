@@ -35,7 +35,21 @@ const cookieTypes = [
 ];
 
 export default function CookiePolicyPage() {
-  const [cookies, setCookies] = useState(cookieTypes);
+  const [cookies, setCookies] = useState(() => {
+    const saved = localStorage.getItem("cookie-preferences");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return cookieTypes.map((c) => ({
+          ...c,
+          enabled: parsed[c.id] !== undefined ? parsed[c.id] : c.enabled,
+        }));
+      } catch (e) {
+        return cookieTypes;
+      }
+    }
+    return cookieTypes;
+  });
 
   const toggleCookie = (id: string) => {
     setCookies((prev) =>
@@ -44,7 +58,34 @@ export default function CookiePolicyPage() {
   };
 
   const savePreferences = () => {
+    const preferences = cookies.reduce((acc, curr) => {
+      acc[curr.id] = curr.enabled;
+      return acc;
+    }, {} as Record<string, boolean>);
+    localStorage.setItem("cookie-preferences", JSON.stringify(preferences));
     toast.success("Cookie preferences saved!");
+  };
+
+  const handleAcceptAll = () => {
+    const updated = cookies.map((c) => ({ ...c, enabled: true }));
+    setCookies(updated);
+    const preferences = updated.reduce((acc, curr) => {
+      acc[curr.id] = true;
+      return acc;
+    }, {} as Record<string, boolean>);
+    localStorage.setItem("cookie-preferences", JSON.stringify(preferences));
+    toast.success("All cookies accepted");
+  };
+
+  const handleRejectNonEssential = () => {
+    const updated = cookies.map((c) => ({ ...c, enabled: c.required }));
+    setCookies(updated);
+    const preferences = updated.reduce((acc, curr) => {
+      acc[curr.id] = curr.required;
+      return acc;
+    }, {} as Record<string, boolean>);
+    localStorage.setItem("cookie-preferences", JSON.stringify(preferences));
+    toast.success("Non-essential cookies rejected");
   };
 
   return (
@@ -108,19 +149,13 @@ export default function CookiePolicyPage() {
               Save Preferences
             </button>
             <button
-              onClick={() => {
-                setCookies(cookieTypes.map((c) => ({ ...c, enabled: true })));
-                toast.success("All cookies accepted");
-              }}
+              onClick={handleAcceptAll}
               className="px-6 py-2.5 rounded-xl border border-border hover:bg-muted text-sm font-medium transition-all"
             >
               Accept All
             </button>
             <button
-              onClick={() => {
-                setCookies(cookieTypes.map((c) => ({ ...c, enabled: c.required })));
-                toast.success("Non-essential cookies rejected");
-              }}
+              onClick={handleRejectNonEssential}
               className="px-6 py-2.5 rounded-xl border border-border hover:bg-muted text-sm font-medium transition-all"
             >
               Reject Non-Essential

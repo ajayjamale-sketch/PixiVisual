@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { FileText, Book, Code, Terminal, Zap, ArrowRight, Search, ExternalLink } from "lucide-react";
+import { FileText, Book, Code, Terminal, Zap, ArrowRight, Search, ExternalLink, X } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const docSections = [
   {
@@ -49,8 +50,28 @@ const docSections = [
   },
 ];
 
+const docArticlesDetail: Record<string, string> = {
+  "Quick Start Guide": "Welcome to PixiVisual! To get started, register or log in using OTP authentication. Once on your dashboard, explore the AI Design Studio or select from hundreds of ready-to-use template canvases. You can edit shape positions, colors, gradients, and export them directly.",
+  "Platform Overview": "PixiVisual is a modular creative suite designed to facilitate AI design workflows. It consists of the AI Generator Studio, the Canvas Graphic Editor, and specialized dashboards tailored for Agencies, Enterprises, Freelancers, and Designers.",
+  "Creating Your First Design": "Navigate to /editor to launch the Canvas editor. You can insert text boxes, circles, rectangles, or stock images. Drag layers to adjust layering order, change opacities, lock assets, or resize dimensions instantly.",
+  "Account & Billing": "Review your plan status from the User Details dialog or Dashboard sections. PixiVisual features flexible subscription models (Pro, Business, Enterprise) that grant customizable AI prompt limits and quota options.",
+  "AI Image Generation": "Inside the AI Studio, write detailed descriptive prompts. For instance, 'photo of a sleek tech office, HSL ambient lighting, 8k, modern interior'. Select preset modifiers like realistic or cartoon to adjust output styles.",
+  "AI Poster & Banner Maker": "Preload aspect ratios specifically optimized for posters or banner creatives. The AI generation engine layout analysis preserves central focus zones to ensure legible custom text overlays.",
+  "Prompt Engineering Guide": "Optimize your results by specifying clear lighting instructions (e.g. volumetric rays, golden hour), quality tokens (award-winning rendering), color codes, and HSL palettes.",
+  "AI Generation Limits": "Usage quota metrics depend on subscription plans. Standard users receive 100 AI credits monthly. Enterprise users benefit from customized workspace shared pools managed by administrators.",
+  "Canvas Editor Overview": "Our editor runs fully client-side using responsive state management. Control panels let you add shapes, adjust layer visibility, and modify exact X/Y coordinate systems.",
+  "Working with Layers": "The layers panel lists active shapes, images, and text. Toggle the eye icon to control visibility, click the padlock to toggle lock status, or press delete to prune unused assets.",
+  "Export & Download": "Export your work as production-ready SVG vectors or standard PNG images. SVGs preserve clean mathematical equations, making them ideal for high-resolution print workflows.",
+  "Keyboard Shortcuts": "Boost your design speed! Press [Ctrl + S] to commit progress to local storage, and [Ctrl + E] to trigger dynamic SVG downloads in your browser.",
+  "Authentication": "Secure your requests via standard Bearer tokens. Generate your API key in the account dashboard, and include it in your authorization header as Bearer YOUR_API_KEY.",
+  "Image Generation API": "Trigger AI image creations programmatically by calling POST /v1/generate/image. Parameters include prompt, style, resolution, and HSL theme color arrays.",
+  "Template API": "Retrieve predefined template structures by calling GET /v1/templates. Ideal for automated social media marketing generation systems.",
+  "Webhooks": "Register webhook listener endpoints to receive live status notifications, such as when async AI video rendering batches complete."
+};
+
 export default function DocumentationPage() {
   const [search, setSearch] = useState("");
+  const [activeArticle, setActiveArticle] = useState<typeof docSections[0]["articles"][0] | null>(null);
 
   const filtered = docSections.map((s) => ({
     ...s,
@@ -106,7 +127,7 @@ export default function DocumentationPage() {
                   {section.articles.map((article) => (
                     <button
                       key={article.title}
-                      onClick={() => {}}
+                      onClick={() => setActiveArticle(article)}
                       className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-all group text-left"
                     >
                       <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -145,6 +166,48 @@ export default function DocumentationPage() {
           </Link>
         </div>
       </div>
+
+      {/* Article Detail Modal */}
+      {activeArticle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setActiveArticle(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg bg-background/80"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 border border-primary-500/20 text-xs text-primary-500 font-semibold mb-3">
+              <FileText className="w-3.5 h-3.5" /> Documentation
+            </div>
+            <h2 className="font-heading font-bold text-xl mb-1">{activeArticle.title}</h2>
+            <span className="text-xs text-muted-foreground block mb-4">{activeArticle.time} · Platform Reference</span>
+            <div className="bg-muted rounded-xl p-4 text-xs text-muted-foreground leading-relaxed mb-6">
+              <p className="font-semibold text-foreground mb-1">{activeArticle.desc}</p>
+              <p className="mt-2 text-muted-foreground">
+                {docArticlesDetail[activeArticle.title] || "Detailed documentation guidelines are currently being compiled. Please check back for updates or contact our support channels."}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.origin + `/docs#${activeArticle.title.toLowerCase().replace(/\s+/g, "-")}`);
+                  toast.success("Article link copied!");
+                }}
+                className="px-4 py-2 rounded-xl border border-border hover:bg-muted text-xs font-medium transition-all"
+              >
+                Share Link
+              </button>
+              <button 
+                onClick={() => setActiveArticle(null)}
+                className="px-4 py-2 rounded-xl bg-primary-500 text-white font-semibold text-xs hover-glow transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

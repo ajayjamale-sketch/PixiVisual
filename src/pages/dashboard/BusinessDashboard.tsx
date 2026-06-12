@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Palette, TrendingUp, Users, BarChart2, Megaphone, Plus,
-  ArrowRight, DollarSign, Edit3, Trash2, Eye, Target, Star
+  ArrowRight, DollarSign, Edit3, Trash2, Eye, Target, Star, X
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from "recharts";
 import StatCard from "@/components/ui/StatCard";
@@ -37,6 +37,13 @@ export default function BusinessDashboard() {
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [showNewCampaign, setShowNewCampaign] = useState(false);
   const [newCampaignName, setNewCampaignName] = useState("");
+  
+  const [editingCampaign, setEditingCampaign] = useState<typeof initialCampaigns[0] | null>(null);
+  
+  const [teamList, setTeamList] = useState(teamMembers);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState("Marketing Analyst");
 
   const stats = [
     { label: "Brand Score", value: "94/100", change: "+8pts", trend: "up" as const, color: "bg-primary-500" },
@@ -66,6 +73,45 @@ export default function BusinessDashboard() {
     setNewCampaignName("");
     setShowNewCampaign(false);
     toast.success("Campaign created!");
+  };
+
+  const saveCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCampaign) return;
+    setCampaigns((prev) => prev.map((c) => c.id === editingCampaign.id ? editingCampaign : c));
+    setEditingCampaign(null);
+    toast.success("Campaign updated!");
+  };
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName.trim()) return;
+    const newMember = {
+      name: inviteName,
+      role: inviteRole,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=60&h=60&fit=crop&crop=faces`,
+      designs: 0
+    };
+    setTeamList((prev) => [newMember, ...prev]);
+    setInviteName("");
+    setShowInviteModal(false);
+    toast.success(`Invitation sent to ${inviteName}!`);
+  };
+
+  const downloadReport = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "ID,Campaign Name,Status,Reach,Conversion,Budget,Start Date,End Date\n";
+    campaigns.forEach(c => {
+      csvContent += `${c.id},"${c.name}",${c.status},"${c.reach}","${c.conversion}","${c.budget}",${c.startDate},${c.endDate}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "campaign_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Campaign report downloaded!");
   };
 
   const tabs = [
@@ -225,7 +271,7 @@ export default function BusinessDashboard() {
                             Launch
                           </button>
                         )}
-                        <button onClick={() => toast.info("Edit campaign")} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                        <button onClick={() => setEditingCampaign(c)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => deleteCampaign(c.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500">
@@ -245,21 +291,21 @@ export default function BusinessDashboard() {
       {activeTab === "team" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Team Members (24)</h2>
-            <button onClick={() => toast.success("Invite sent!")} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover-glow transition-all">
+            <h2 className="font-semibold">Team Members ({teamList.length})</h2>
+            <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover-glow transition-all">
               <Plus className="w-4 h-4" /> Invite Member
             </button>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...teamMembers, ...teamMembers].slice(0, 6).map((m, i) => (
+            {teamList.map((m, i) => (
               <div key={i} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 hover-lift">
                 <img src={m.avatar} alt={m.name} className="w-12 h-12 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{m.name}</p>
                   <p className="text-xs text-muted-foreground">{m.role}</p>
-                  <p className="text-xs text-primary-500 mt-0.5">{m.designs + i * 5} designs</p>
+                  <p className="text-xs text-primary-500 mt-0.5">{m.designs} designs</p>
                 </div>
-                <button onClick={() => toast.info("View profile")} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                <button onClick={() => toast.success(`Viewing profile of ${m.name}`)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
                   <Eye className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
@@ -304,9 +350,137 @@ export default function BusinessDashboard() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button onClick={() => toast.success("Downloading report...")} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
+            <button onClick={downloadReport} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
               Download Full Report
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Campaign Modal */}
+      {editingCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setEditingCampaign(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-4">Edit Campaign</h2>
+            <form onSubmit={saveCampaign} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Campaign Name</label>
+                <input
+                  type="text"
+                  value={editingCampaign.name}
+                  onChange={(e) => setEditingCampaign(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Budget</label>
+                <input
+                  type="text"
+                  value={editingCampaign.budget}
+                  onChange={(e) => setEditingCampaign(prev => prev ? ({ ...prev, budget: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Start Date</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.startDate}
+                    onChange={(e) => setEditingCampaign(prev => prev ? ({ ...prev, startDate: e.target.value }) : null)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">End Date</label>
+                  <input
+                    type="text"
+                    value={editingCampaign.endDate}
+                    onChange={(e) => setEditingCampaign(prev => prev ? ({ ...prev, endDate: e.target.value }) : null)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Status</label>
+                <select
+                  value={editingCampaign.status}
+                  onChange={(e) => setEditingCampaign(prev => prev ? ({ ...prev, status: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold text-sm hover-glow transition-all">
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setEditingCampaign(null)} className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted font-medium text-sm transition-all">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Member Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowInviteModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-4">Invite Team Member</h2>
+            <form onSubmit={handleInvite} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Alex Rivera"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="Marketing Lead">Marketing Lead</option>
+                  <option value="Brand Designer">Brand Designer</option>
+                  <option value="Content Creator">Content Creator</option>
+                  <option value="Marketing Analyst">Marketing Analyst</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold text-sm hover-glow transition-all">
+                  Send Invitation
+                </button>
+                <button type="button" onClick={() => setShowInviteModal(false)} className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted font-medium text-sm transition-all">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

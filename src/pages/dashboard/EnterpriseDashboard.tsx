@@ -40,6 +40,7 @@ export default function EnterpriseDashboard() {
   const [showAddDept, setShowAddDept] = useState(false);
   const [newDeptName, setNewDeptName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingDept, setEditingDept] = useState<typeof initialDepartments[0] | null>(null);
 
   const stats = [
     { label: "Total Users", value: "247", change: "+34", trend: "up" as const, color: "bg-primary-500" },
@@ -70,6 +71,30 @@ export default function EnterpriseDashboard() {
     setNewDeptName("");
     setShowAddDept(false);
     toast.success(`Department "${newDeptName}" created!`);
+  };
+
+  const saveDepartment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDept) return;
+    setDepartments((prev) => prev.map((d) => d.id === editingDept.id ? editingDept : d));
+    setEditingDept(null);
+    toast.success("Department settings updated!");
+  };
+
+  const downloadEnterpriseReport = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Department ID,Department Name,Members,Assets Count,Usage %,Quota (GB)\n";
+    departments.forEach(d => {
+      csvContent += `${d.id},"${d.name}",${d.members},${d.assets},${d.usage}%,${Math.round(d.usage * 1.86)}GB\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "enterprise_department_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Enterprise report downloaded!");
   };
 
   const filteredDepts = departments.filter((d) =>
@@ -243,7 +268,7 @@ export default function EnterpriseDashboard() {
                     </div>
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => toast.info("Edit department settings")} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                    <button onClick={() => setEditingDept(dept)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => deleteDept(dept.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500">
@@ -352,9 +377,66 @@ export default function EnterpriseDashboard() {
             </div>
           </div>
           <div className="flex justify-end">
-            <button onClick={() => toast.success("Downloading enterprise report...")} className="px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
+            <button onClick={downloadEnterpriseReport} className="px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
               Export Analytics Report
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Department Modal */}
+      {editingDept && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setEditingDept(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-4">Edit Department</h2>
+            <form onSubmit={saveDepartment} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Department Name</label>
+                <input
+                  type="text"
+                  value={editingDept.name}
+                  onChange={(e) => setEditingDept(prev => prev ? ({ ...prev, name: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Members Count</label>
+                <input
+                  type="number"
+                  value={editingDept.members}
+                  onChange={(e) => setEditingDept(prev => prev ? ({ ...prev, members: parseInt(e.target.value) || 0 }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Quota Usage (%)</label>
+                <input
+                  type="number"
+                  max="100"
+                  min="0"
+                  value={editingDept.usage}
+                  onChange={(e) => setEditingDept(prev => prev ? ({ ...prev, usage: parseInt(e.target.value) || 0 }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold text-sm hover-glow transition-all">
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setEditingDept(null)} className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted font-medium text-sm transition-all">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

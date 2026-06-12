@@ -50,8 +50,19 @@ const statusConfig: Record<Status, { label: string; color: string; icon: typeof 
 };
 
 export default function RoadmapPage() {
-  const [votedItems, setVotedItems] = useState<Set<string>>(new Set());
-  const [idea, setIdea] = useState("");
+  const [votedItems, setVotedItems] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem("pixivisual-roadmap-votes");
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  const [submittedIdeas, setSubmittedIdeas] = useState<Array<{ title: string; desc: string; status: Status; votes: number; category: string }>>(() => {
+    const saved = localStorage.getItem("pixivisual-roadmap-ideas");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [ideaTitle, setIdeaTitle] = useState("");
+  const [ideaCategory, setIdeaCategory] = useState("AI");
+  const [ideaDesc, setIdeaDesc] = useState("");
 
   const toggleVote = (itemTitle: string) => {
     setVotedItems((prev) => {
@@ -63,15 +74,34 @@ export default function RoadmapPage() {
         next.add(itemTitle);
         toast.success("Vote recorded! Thanks for your feedback.");
       }
+      localStorage.setItem("pixivisual-roadmap-votes", JSON.stringify(Array.from(next)));
       return next;
     });
   };
 
   const submitIdea = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idea.trim()) return;
-    toast.success("Feature idea submitted! We'll review it soon.");
-    setIdea("");
+    if (!ideaTitle.trim() || !ideaDesc.trim()) {
+      toast.error("Please fill in both the title and description.");
+      return;
+    }
+    const newIdea = {
+      title: ideaTitle.trim(),
+      desc: ideaDesc.trim(),
+      status: "considering" as Status,
+      votes: 0,
+      category: ideaCategory,
+    };
+    const updatedIdeas = [...submittedIdeas, newIdea];
+    setSubmittedIdeas(updatedIdeas);
+    localStorage.setItem("pixivisual-roadmap-ideas", JSON.stringify(updatedIdeas));
+    
+    // Auto vote for user's own idea
+    toggleVote(newIdea.title);
+
+    setIdeaTitle("");
+    setIdeaDesc("");
+    setIdeaCategory("AI");
   };
 
   return (
@@ -105,48 +135,55 @@ export default function RoadmapPage() {
 
         {/* Roadmap Items */}
         <div className="space-y-12">
-          {roadmapItems.map((quarter) => (
-            <div key={quarter.quarter}>
-              <h2 className="font-heading font-bold text-xl mb-5 flex items-center gap-2">
-                <Rocket className="w-5 h-5 text-primary-500" />
-                {quarter.quarter}
-              </h2>
-              <div className="space-y-3">
-                {quarter.items.map((item) => {
-                  const cfg = statusConfig[item.status];
-                  const Icon = cfg.icon;
-                  const isVoted = votedItems.has(item.title);
-                  return (
-                    <div key={item.title} className="bg-card border border-border rounded-2xl p-5 hover:border-primary-500/30 hover-lift transition-all">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <h3 className="font-semibold">{item.title}</h3>
-                            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${cfg.color}`}>
-                              <Icon className="w-3 h-3" />{cfg.label}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{item.category}</span>
+          {roadmapItems.map((quarter) => {
+            const isConsidering = quarter.quarter === "Future — Considering";
+            const itemsToRender = isConsidering
+              ? [...quarter.items, ...submittedIdeas]
+              : quarter.items;
+
+            return (
+              <div key={quarter.quarter}>
+                <h2 className="font-heading font-bold text-xl mb-5 flex items-center gap-2">
+                  <Rocket className="w-5 h-5 text-primary-500" />
+                  {quarter.quarter}
+                </h2>
+                <div className="space-y-3">
+                  {itemsToRender.map((item) => {
+                    const cfg = statusConfig[item.status];
+                    const Icon = cfg.icon;
+                    const isVoted = votedItems.has(item.title);
+                    return (
+                      <div key={item.title} className="bg-card border border-border rounded-2xl p-5 hover:border-primary-500/30 hover-lift transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                              <h3 className="font-semibold">{item.title}</h3>
+                              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${cfg.color}`}>
+                                <Icon className="w-3 h-3" />{cfg.label}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{item.category}</span>
+                            </div>
+                            <p className="text-muted-foreground text-sm">{item.desc}</p>
                           </div>
-                          <p className="text-muted-foreground text-sm">{item.desc}</p>
+                          <button
+                            onClick={() => toggleVote(item.title)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all flex-shrink-0 ${
+                              isVoted
+                                ? "bg-primary-500 border-primary-500 text-white"
+                                : "border-border hover:border-primary-500/50 hover:text-primary-500"
+                            }`}
+                          >
+                            <Vote className="w-4 h-4" />
+                            {item.votes + (isVoted ? 1 : 0)}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => toggleVote(item.title)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all flex-shrink-0 ${
-                            isVoted
-                              ? "bg-primary-500 border-primary-500 text-white"
-                              : "border-border hover:border-primary-500/50 hover:text-primary-500"
-                          }`}
-                        >
-                          <Vote className="w-4 h-4" />
-                          {item.votes + (isVoted ? 1 : 0)}
-                        </button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Submit Idea */}
@@ -155,14 +192,44 @@ export default function RoadmapPage() {
             <Lightbulb className="w-10 h-10 text-warning mx-auto mb-3" />
             <h2 className="font-heading font-bold text-2xl mb-2">Have a Feature Idea?</h2>
             <p className="text-muted-foreground text-sm mb-6">Share your idea and our product team will review it. The most-voted ideas get prioritized.</p>
-            <form onSubmit={submitIdea} className="space-y-3">
-              <textarea
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                placeholder="Describe your feature idea in detail..."
-                rows={3}
-                className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-              />
+            <form onSubmit={submitIdea} className="space-y-4 text-left">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Feature Title</label>
+                  <input
+                    type="text"
+                    value={ideaTitle}
+                    onChange={(e) => setIdeaTitle(e.target.value)}
+                    placeholder="e.g. Photoshop Brush Integration"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Category</label>
+                  <select
+                    value={ideaCategory}
+                    onChange={(e) => setIdeaCategory(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="AI">AI & Generation</option>
+                    <option value="Collaboration">Collaboration</option>
+                    <option value="Mobile">Mobile & Apps</option>
+                    <option value="Design">Design Tools</option>
+                    <option value="Integrations">Integrations</option>
+                    <option value="Innovation">Innovation</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Description</label>
+                <textarea
+                  value={ideaDesc}
+                  onChange={(e) => setIdeaDesc(e.target.value)}
+                  placeholder="Describe your feature idea in detail, detailing what it is and who it helps..."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+              </div>
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold hover-glow transition-all flex items-center justify-center gap-2"

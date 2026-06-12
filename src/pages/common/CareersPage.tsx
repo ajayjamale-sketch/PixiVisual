@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Briefcase, ArrowRight, Zap } from "lucide-react";
+import { MapPin, Briefcase, ArrowRight, Zap, X } from "lucide-react";
+import { toast } from "sonner";
 
 const jobs = [
   { title: "Senior AI/ML Engineer", dept: "Engineering", location: "San Francisco / Remote", type: "Full-time" },
@@ -20,6 +22,33 @@ const perks = [
 ];
 
 export default function CareersPage() {
+  const [applyingJob, setApplyingJob] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [resume, setResume] = useState("");
+  const [portfolio, setPortfolio] = useState("");
+  const [cover, setCover] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim()) {
+      toast.error("Please fill in required fields");
+      return;
+    }
+    setIsSubmitting(true);
+    setTimeout(() => {
+      toast.success(`Application for ${applyingJob} submitted successfully!`);
+      setApplyingJob(null);
+      setName("");
+      setEmail("");
+      setResume("");
+      setPortfolio("");
+      setCover("");
+      setIsSubmitting(false);
+    }, 1500);
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -49,13 +78,101 @@ export default function CareersPage() {
                   <span className="px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium">{job.type}</span>
                 </div>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white text-sm font-semibold hover:shadow-glow transition-all flex-shrink-0">
+              <button 
+                onClick={() => setApplyingJob(job.title)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white text-sm font-semibold hover:shadow-glow transition-all flex-shrink-0"
+              >
                 Apply Now <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Application Modal */}
+      {applyingJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setApplyingJob(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-1">Apply for Role</h2>
+            <p className="text-sm text-muted-foreground mb-4">{applyingJob}</p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Email *</label>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Resume Link (PDF/Drive) *</label>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/.../resume.pdf"
+                  value={resume}
+                  onChange={(e) => setResume(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Portfolio Link</label>
+                <input
+                  type="url"
+                  placeholder="https://myportfolio.com"
+                  value={portfolio}
+                  onChange={(e) => setPortfolio(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Cover Letter (Brief)</label>
+                <textarea
+                  placeholder="Why are you a good fit for this role?"
+                  value={cover}
+                  onChange={(e) => setCover(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-bold flex items-center justify-center gap-2 hover-glow transition-all disabled:opacity-70"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Application"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

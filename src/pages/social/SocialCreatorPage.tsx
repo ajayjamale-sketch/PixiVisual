@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Instagram, Youtube, Share2, Layout, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,19 @@ const templates = [
 ];
 
 export default function SocialCreatorPage() {
+  const navigate = useNavigate();
   const [activePlatform, setActivePlatform] = useState("instagram");
   const [activeSize, setActiveSize] = useState("Post (1:1)");
+
+  const handleUseTemplate = (imgUrl: string, label: string) => {
+    navigate("/editor", {
+      state: {
+        backgroundImage: imgUrl,
+        title: `${label} - ${activePlatform.toUpperCase()}`
+      }
+    });
+    toast.success(`Loaded ${label} template!`);
+  };
 
   const platform = platforms.find((p) => p.id === activePlatform)!;
 
@@ -88,13 +99,18 @@ export default function SocialCreatorPage() {
             {templates.map((t, i) => (
               <div
                 key={i}
-                onClick={() => toast.info(`Opening ${t.label} in editor...`)}
+                onClick={() => handleUseTemplate(t.img, t.label)}
                 className="group rounded-xl overflow-hidden border border-border hover:border-primary-500/30 hover:shadow-card transition-all cursor-pointer"
               >
                 <div className="relative overflow-hidden">
                   <img src={t.img} alt={t.label} className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                    <Link to="/editor" className="w-full text-center py-1.5 bg-white text-black rounded-lg text-xs font-semibold">Use Template</Link>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleUseTemplate(t.img, t.label); }}
+                      className="w-full text-center py-1.5 bg-white text-black rounded-lg text-xs font-semibold hover:bg-primary-500 hover:text-white transition-all"
+                    >
+                      Use Template
+                    </button>
                   </div>
                 </div>
                 <div className="p-2.5">

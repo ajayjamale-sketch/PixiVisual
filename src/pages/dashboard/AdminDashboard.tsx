@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Users, DollarSign, ShoppingBag, AlertTriangle, Activity,
   CheckCircle, XCircle, Search, Filter, Eye, Trash2, Ban,
-  TrendingUp, RefreshCw, Crown, Settings
+  TrendingUp, RefreshCw, Crown, Settings, X
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from "recharts";
 import StatCard from "@/components/ui/StatCard";
@@ -40,6 +40,9 @@ export default function AdminDashboard() {
   const [moderationItems, setModerationItems] = useState(initialModerationItems);
   const [searchQuery, setSearchQuery] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
+  
+  const [reviewingItem, setReviewingItem] = useState<typeof initialModerationItems[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<typeof initialUsers[0] | null>(null);
 
   const stats = [
     { label: "Total Users", value: "2.4M", change: "+12,400", trend: "up" as const, color: "bg-primary-500" },
@@ -61,12 +64,30 @@ export default function AdminDashboard() {
 
   const approveModeration = (id: number) => {
     setModerationItems((prev) => prev.filter((m) => m.id !== id));
+    if (reviewingItem?.id === id) setReviewingItem(null);
     toast.success("Item approved and restored");
   };
 
   const rejectModeration = (id: number) => {
     setModerationItems((prev) => prev.filter((m) => m.id !== id));
+    if (reviewingItem?.id === id) setReviewingItem(null);
     toast.success("Item removed from platform");
+  };
+
+  const downloadRevenueReport = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Month,Revenue (USD),Subscriptions\n";
+    SAMPLE_CHART_DATA.monthlyRevenue.forEach(row => {
+      csvContent += `"${row.month}",${row.revenue},${row.subscriptions}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "mrr_revenue_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Revenue report downloaded!");
   };
 
   const filteredUsers = users.filter((u) => {
@@ -254,7 +275,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="p-4">
                       <div className="flex gap-1">
-                        <button onClick={() => toast.info("View user details")} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                        <button onClick={() => setSelectedUser(u)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="View Details">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => suspendUser(u.id)} className={cn("p-1.5 rounded-lg transition-colors", u.status === "suspended" ? "hover:bg-success/10 text-success hover:text-success" : "hover:bg-warning/10 text-muted-foreground hover:text-warning")}>
@@ -299,7 +320,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => toast.info("Opening item preview...")} className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-all">Review</button>
+                  <button onClick={() => setReviewingItem(item)} className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium transition-all">Review</button>
                   <button onClick={() => approveModeration(item.id)} className="px-3 py-1.5 rounded-lg bg-success/10 text-success hover:bg-success hover:text-white font-medium text-sm transition-all">Approve</button>
                   <button onClick={() => rejectModeration(item.id)} className="px-3 py-1.5 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white font-medium text-sm transition-all">Remove</button>
                 </div>
@@ -344,9 +365,116 @@ export default function AdminDashboard() {
             </ResponsiveContainer>
           </div>
           <div className="flex justify-end">
-            <button onClick={() => toast.success("Downloading revenue report...")} className="px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
+            <button onClick={downloadRevenueReport} className="px-5 py-2.5 rounded-xl bg-primary-500/10 text-primary-500 text-sm font-semibold hover:bg-primary-500 hover:text-white transition-all">
               Export Revenue Report
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Moderation Review Modal */}
+      {reviewingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setReviewingItem(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-warning" /> Review Content
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">Moderation assessment required for content flagged by reporter.</p>
+            <div className="bg-muted rounded-xl p-4 space-y-2 mb-5">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Content Details</p>
+              <p className="text-sm font-bold">{reviewingItem.name}</p>
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1.5">
+                <div>
+                  <span className="text-muted-foreground">Type:</span> {reviewingItem.type}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Flag:</span> <span className="text-warning font-medium">{reviewingItem.flag}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Reporter:</span> {reviewingItem.reporter}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => approveModeration(reviewingItem.id)}
+                className="flex-1 py-2.5 rounded-xl bg-success text-white font-semibold text-sm hover-glow transition-all"
+              >
+                Approve & Keep
+              </button>
+              <button 
+                onClick={() => rejectModeration(reviewingItem.id)}
+                className="flex-1 py-2.5 rounded-xl bg-error text-white font-semibold text-sm hover:opacity-90 transition-all"
+              >
+                Reject & Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setSelectedUser(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-4 mb-4">
+              <img src={selectedUser.avatar} alt={selectedUser.name} className="w-14 h-14 rounded-2xl object-cover" />
+              <div>
+                <h2 className="font-heading font-bold text-lg">{selectedUser.name}</h2>
+                <p className="text-xs text-muted-foreground">{selectedUser.email}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className="bg-muted p-3 rounded-xl">
+                <p className="text-xs text-muted-foreground">Plan Level</p>
+                <p className="font-bold text-sm text-primary-500 flex items-center gap-1 mt-0.5">
+                  <Crown className="w-3.5 h-3.5" /> {selectedUser.plan}
+                </p>
+              </div>
+              <div className="bg-muted p-3 rounded-xl">
+                <p className="text-xs text-muted-foreground">Joined Date</p>
+                <p className="font-bold text-sm mt-0.5">{selectedUser.joined}</p>
+              </div>
+              <div className="bg-muted p-3 rounded-xl">
+                <p className="text-xs text-muted-foreground">Status</p>
+                <span className={cn("inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1", selectedUser.status === "active" ? "bg-success/15 text-success" : "bg-error/15 text-error")}>
+                  {selectedUser.status}
+                </span>
+              </div>
+              <div className="bg-muted p-3 rounded-xl">
+                <p className="text-xs text-muted-foreground">Total Creations</p>
+                <p className="font-bold text-sm mt-0.5">148 designs</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { suspendUser(selectedUser.id); setSelectedUser(prev => prev ? { ...prev, status: prev.status === "suspended" ? "active" : "suspended" } : null); }}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all",
+                  selectedUser.status === "suspended" ? "bg-success text-white" : "bg-warning text-white"
+                )}
+              >
+                {selectedUser.status === "suspended" ? "Reactivate User" : "Suspend User"}
+              </button>
+              <button 
+                onClick={() => { deleteUser(selectedUser.id); setSelectedUser(null); }}
+                className="py-2.5 px-4 rounded-xl border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white font-medium text-sm transition-all"
+              >
+                Delete User
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -40,9 +40,22 @@ export default function DesignerDashboard() {
   const [selectedMsg, setSelectedMsg] = useState<typeof messages[0] | null>(null);
   const [replyText, setReplyText] = useState("");
   const [readMessages, setReadMessages] = useState<Set<number>>(new Set());
+  
+  const [pendingPayout, setPendingPayout] = useState(1840);
+  const [totalRevenue, setTotalRevenue] = useState(14680);
+  
+  const [messageList, setMessageList] = useState(messages);
+  const [messageThreads, setMessageThreads] = useState<Record<number, { sender: string; text: string; time: string; isSelf: boolean }[]>>({
+    1: [{ sender: "James Carter", text: "Love your brand kit! Any custom work available?", time: "2h ago", isSelf: false }],
+    2: [{ sender: "Lisa Park", text: "Can you create a logo for my startup?", time: "5h ago", isSelf: false }],
+    3: [{ sender: "Tom Wilson", text: "Purchased your UI kit. Amazing work!", time: "1d ago", isSelf: false }],
+    4: [{ sender: "Anna Kim", text: "Is the Social Media Pack compatible with Figma?", time: "2d ago", isSelf: false }],
+  });
+
+  const [editingTemplate, setEditingTemplate] = useState<typeof initialPortfolio[0] | null>(null);
 
   const stats = [
-    { label: "Total Revenue", value: "$14,680", change: "+28%", trend: "up" as const, color: "bg-success" },
+    { label: "Total Revenue", value: `$${totalRevenue.toLocaleString()}`, change: "+28%", trend: "up" as const, color: "bg-success" },
     { label: "Template Sales", value: "513", change: "+42%", trend: "up" as const, color: "bg-primary-500" },
     { label: "Portfolio Views", value: "48.2K", change: "+15%", trend: "up" as const, color: "bg-secondary-500" },
     { label: "Avg Rating", value: "4.9 ★", change: "+0.1", trend: "up" as const, color: "bg-warning" },
@@ -60,16 +73,44 @@ export default function DesignerDashboard() {
 
   const sendReply = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
-    toast.success(`Reply sent to ${selectedMsg?.name}`);
+    if (!replyText.trim() || !selectedMsg) return;
+    
+    setMessageThreads(prev => ({
+      ...prev,
+      [selectedMsg.id]: [
+        ...prev[selectedMsg.id],
+        { sender: user?.name || "You", text: replyText, time: "Just now", isSelf: true }
+      ]
+    }));
+    
+    setMessageList(prev => prev.map(m => m.id === selectedMsg.id ? { ...m, msg: replyText, time: "Just now" } : m));
+    toast.success(`Reply sent to ${selectedMsg.name}`);
     setReplyText("");
-    setSelectedMsg(null);
+  };
+
+  const saveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+    setPortfolio(prev => prev.map(item => item.id === editingTemplate.id ? editingTemplate : item));
+    setEditingTemplate(null);
+    toast.success("Template details updated!");
+  };
+
+  const handleRequestPayout = () => {
+    if (pendingPayout <= 0) {
+      toast.error("No pending payout balance available.");
+      return;
+    }
+    const amount = pendingPayout;
+    setTotalRevenue(prev => prev + amount);
+    setPendingPayout(0);
+    toast.success(`Payout of $${amount} successfully requested and processed!`);
   };
 
   const tabs = [
     { key: "overview", label: "Overview" },
     { key: "portfolio", label: "Portfolio" },
-    { key: "messages", label: "Messages", badge: messages.filter(m => !readMessages.has(m.id) && m.unread).length },
+    { key: "messages", label: "Messages", badge: messageList.filter(m => !readMessages.has(m.id) && m.unread).length },
     { key: "earnings", label: "Earnings" },
   ] as const;
 
@@ -131,7 +172,7 @@ export default function DesignerDashboard() {
             <div className="bg-card border border-border rounded-2xl p-5">
               <h2 className="font-semibold mb-4">Recent Messages</h2>
               <div className="space-y-3">
-                {messages.slice(0, 3).map((m) => (
+                {messageList.slice(0, 3).map((m) => (
                   <button key={m.id} onClick={() => openMessage(m)} className="w-full flex items-start gap-3 p-3 rounded-xl hover:bg-muted transition-all text-left group">
                     <img src={m.avatar} alt={m.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -190,7 +231,7 @@ export default function DesignerDashboard() {
                 <div className="relative">
                   <img src={item.img} alt={item.title} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1.5 transition-opacity">
-                    <button onClick={() => toast.info("Edit template...")} className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors shadow-sm">
+                    <button onClick={() => setEditingTemplate(item)} className="p-1.5 bg-white/90 rounded-lg hover:bg-white transition-colors shadow-sm">
                       <Edit3 className="w-3 h-3 text-gray-700" />
                     </button>
                     <button onClick={() => deleteTemplate(item.id)} className="p-1.5 bg-white/90 rounded-lg hover:bg-red-50 transition-colors shadow-sm">
@@ -217,10 +258,10 @@ export default function DesignerDashboard() {
       {activeTab === "messages" && (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <div className="p-5 border-b border-border">
-            <h2 className="font-semibold">Messages ({messages.length})</h2>
+            <h2 className="font-semibold">Messages ({messageList.length})</h2>
           </div>
           <div className="divide-y divide-border">
-            {messages.map((m) => (
+            {messageList.map((m) => (
               <button key={m.id} onClick={() => openMessage(m)} className="w-full flex items-start gap-4 p-4 hover:bg-muted transition-all text-left">
                 <img src={m.avatar} alt={m.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -243,8 +284,8 @@ export default function DesignerDashboard() {
           <div className="grid md:grid-cols-3 gap-4">
             {[
               { label: "This Month", value: "$4,100", icon: DollarSign, color: "text-success bg-success/10" },
-              { label: "Pending Payout", value: "$1,840", icon: DollarSign, color: "text-warning bg-warning/10" },
-              { label: "All Time", value: "$14,680", icon: DollarSign, color: "text-primary-500 bg-primary-500/10" },
+              { label: "Pending Payout", value: `$${pendingPayout.toLocaleString()}`, icon: DollarSign, color: "text-warning bg-warning/10" },
+              { label: "All Time", value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: "text-primary-500 bg-primary-500/10" },
             ].map((s) => {
               const Icon = s.icon;
               return (
@@ -279,8 +320,16 @@ export default function DesignerDashboard() {
             </ResponsiveContainer>
           </div>
           <div className="flex justify-end">
-            <button onClick={() => toast.success("Payout requested! Processing in 2-3 business days.")} className="px-6 py-2.5 rounded-xl bg-success/10 text-success hover:bg-success hover:text-white font-semibold text-sm transition-all">
-              Request Payout ($1,840)
+            <button 
+              onClick={handleRequestPayout} 
+              className={cn(
+                "px-6 py-2.5 rounded-xl font-semibold text-sm transition-all",
+                pendingPayout > 0 
+                  ? "bg-success/10 text-success hover:bg-success hover:text-white" 
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              Request Payout {pendingPayout > 0 ? `($${pendingPayout.toLocaleString()})` : "(No Balance)"}
             </button>
           </div>
         </div>
@@ -302,8 +351,14 @@ export default function DesignerDashboard() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 bg-muted rounded-xl mb-4">
-              <p className="text-sm">{selectedMsg.msg}</p>
+            <div className="space-y-3 max-h-60 overflow-y-auto mb-4 p-2 bg-muted rounded-xl">
+              {messageThreads[selectedMsg.id]?.map((msg, i) => (
+                <div key={i} className={cn("flex flex-col max-w-[85%] rounded-2xl p-3 text-sm shadow-sm", msg.isSelf ? "bg-primary-500 text-white ml-auto" : "bg-card border border-border text-foreground mr-auto")}>
+                  <p className="font-semibold text-xs opacity-80 mb-0.5">{msg.sender}</p>
+                  <p>{msg.text}</p>
+                  <span className="text-[10px] opacity-60 self-end mt-1">{msg.time}</span>
+                </div>
+              ))}
             </div>
             <form onSubmit={sendReply} className="space-y-3">
               <textarea
@@ -319,6 +374,64 @@ export default function DesignerDashboard() {
                   <Send className="w-4 h-4" /> Send Reply
                 </button>
                 <button type="button" onClick={() => setSelectedMsg(null)} className="px-4 py-2.5 rounded-xl border border-border hover:bg-muted text-sm transition-all">
+                  Close
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Template Modal */}
+      {editingTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setEditingTemplate(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-4">Edit Template</h2>
+            <form onSubmit={saveTemplate} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Template Title</label>
+                <input
+                  type="text"
+                  value={editingTemplate.title}
+                  onChange={(e) => setEditingTemplate(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Price ($)</label>
+                <input
+                  type="number"
+                  value={editingTemplate.price}
+                  onChange={(e) => setEditingTemplate(prev => prev ? ({ ...prev, price: parseInt(e.target.value) || 0 }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1.5">Category</label>
+                <select
+                  value={editingTemplate.category}
+                  onChange={(e) => setEditingTemplate(prev => prev ? ({ ...prev, category: e.target.value }) : null)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="Brand">Brand</option>
+                  <option value="Social">Social</option>
+                  <option value="UI Kit">UI Kit</option>
+                  <option value="Logo">Logo</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold text-sm hover-glow transition-all">
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setEditingTemplate(null)} className="flex-1 py-2.5 rounded-xl border border-border hover:bg-muted font-medium text-sm transition-all">
                   Cancel
                 </button>
               </div>

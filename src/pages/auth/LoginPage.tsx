@@ -13,7 +13,19 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
   const [activeDemo, setActiveDemo] = useState<UserRole | null>(null);
+
+  const handleSocialLogin = async (provider: string) => {
+    setIsSocialLoading(provider);
+    const id = toast.loading(`Connecting to ${provider}...`);
+    await new Promise((r) => setTimeout(r, 1200));
+    toast.dismiss(id);
+    const user = await loginDemo("content-creator");
+    toast.success(`Successfully authenticated via ${provider}! Welcome, ${user.name}.`);
+    navigate("/dashboard/creator");
+    setIsSocialLoading(null);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,16 +67,22 @@ export default function LoginPage() {
             {["Google", "GitHub"].map((provider) => (
               <button
                 key={provider}
-                onClick={() => toast.info(`${provider} login coming soon`)}
-                className="flex items-center justify-center gap-2 py-2.5 px-4 border border-border rounded-xl hover:bg-muted transition-all text-sm font-medium"
+                type="button"
+                disabled={isLoading || isSocialLoading !== null}
+                onClick={() => handleSocialLogin(provider)}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 border border-border rounded-xl hover:bg-muted transition-all text-sm font-medium disabled:opacity-50"
               >
-                <img
-                  src={provider === "Google"
-                    ? "https://www.google.com/favicon.ico"
-                    : "https://github.com/favicon.ico"}
-                  alt={provider}
-                  className="w-4 h-4"
-                />
+                {isSocialLoading === provider ? (
+                  <div className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                ) : (
+                  <img
+                    src={provider === "Google"
+                      ? "https://www.google.com/favicon.ico"
+                      : "https://github.com/favicon.ico"}
+                    alt={provider}
+                    className="w-4 h-4"
+                  />
+                )}
                 {provider}
               </button>
             ))}

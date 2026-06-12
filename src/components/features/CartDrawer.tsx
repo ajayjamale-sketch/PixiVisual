@@ -10,6 +10,12 @@ export default function CartDrawer() {
   const [promoCode, setPromoCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [billingName, setBillingName] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
 
   const applyPromo = () => {
     if (promoCode.toUpperCase() === "PIXI20") {
@@ -30,14 +36,21 @@ export default function CartDrawer() {
     : Math.min(discount, subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
-  const handleCheckout = () => {
+  const handlePay = (e: React.FormEvent) => {
+    e.preventDefault();
     setIsCheckingOut(true);
     setTimeout(() => {
-      toast.success("Order placed successfully! Check your email for receipt.", { duration: 5000 });
+      toast.success("Payment successful! Your order has been placed.", { duration: 5000 });
       clearCart();
+      setShowBillingModal(false);
       closeCart();
       setIsCheckingOut(false);
       setDiscount(0);
+      setBillingName("");
+      setBillingEmail("");
+      setCardNumber("");
+      setExpiry("");
+      setCvc("");
     }, 2000);
   };
 
@@ -195,21 +208,12 @@ export default function CartDrawer() {
 
             {/* Checkout Button */}
             <button
-              onClick={handleCheckout}
+              onClick={() => setShowBillingModal(true)}
               disabled={isCheckingOut}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-bold flex items-center justify-center gap-2 hover-glow transition-all disabled:opacity-70"
             >
-              {isCheckingOut ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Checkout — ${finalTotal.toFixed(2)}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              Checkout — ${finalTotal.toFixed(2)}
+              <ArrowRight className="w-4 h-4" />
             </button>
 
             <p className="text-xs text-center text-muted-foreground">
@@ -218,6 +222,102 @@ export default function CartDrawer() {
           </div>
         )}
       </div>
+
+      {/* Billing Modal */}
+      {showBillingModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowBillingModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="font-heading font-bold text-xl mb-1 flex items-center gap-2">
+              💳 Payment Details
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">Complete your purchase of ${finalTotal.toFixed(2)}</p>
+            <form onSubmit={handlePay} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sarah Chen"
+                  value={billingName}
+                  onChange={(e) => setBillingName(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Email Address</label>
+                <input
+                  type="email"
+                  placeholder="e.g. sarah@example.com"
+                  value={billingEmail}
+                  onChange={(e) => setBillingEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Card Number</label>
+                <input
+                  type="text"
+                  placeholder="4111 1111 1111 1111"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  maxLength={19}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Expiry Date</label>
+                  <input
+                    type="text"
+                    placeholder="MM/YY"
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    maxLength={5}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">CVC</label>
+                  <input
+                    type="password"
+                    placeholder="123"
+                    value={cvc}
+                    onChange={(e) => setCvc(e.target.value)}
+                    maxLength={3}
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isCheckingOut}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-bold flex items-center justify-center gap-2 hover-glow transition-all disabled:opacity-70 mt-2"
+              >
+                {isCheckingOut ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    Pay Now — ${finalTotal.toFixed(2)}
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

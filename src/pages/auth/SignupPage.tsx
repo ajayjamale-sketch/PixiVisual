@@ -39,6 +39,19 @@ export default function SignupPage() {
     navigate("/dashboard/creator");
   };
 
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+
+  const handleSocialSignup = async (provider: string) => {
+    setIsSocialLoading(provider);
+    const id = toast.loading(`Registering with ${provider}...`);
+    await new Promise((r) => setTimeout(r, 1200));
+    toast.dismiss(id);
+    const user = await signup(`${provider} User`, `${provider.toLowerCase()}@example.com`, "password123");
+    toast.success(`Successfully registered via ${provider}! Welcome, ${user.name}.`);
+    navigate("/dashboard/creator");
+    setIsSocialLoading(null);
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Panel - Visual */}
@@ -102,14 +115,20 @@ export default function SignupPage() {
             {["Google", "GitHub"].map((provider) => (
               <button
                 key={provider}
-                onClick={() => toast.info(`${provider} signup coming soon`)}
-                className="flex items-center justify-center gap-2 py-2.5 px-4 border border-border rounded-xl hover:bg-muted transition-all text-sm font-medium"
+                type="button"
+                disabled={isLoading || isSocialLoading !== null}
+                onClick={() => handleSocialSignup(provider)}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 border border-border rounded-xl hover:bg-muted transition-all text-sm font-medium disabled:opacity-50"
               >
-                <img
-                  src={provider === "Google" ? "https://www.google.com/favicon.ico" : "https://github.com/favicon.ico"}
-                  alt={provider}
-                  className="w-4 h-4"
-                />
+                {isSocialLoading === provider ? (
+                  <div className="w-4 h-4 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                ) : (
+                  <img
+                    src={provider === "Google" ? "https://www.google.com/favicon.ico" : "https://github.com/favicon.ico"}
+                    alt={provider}
+                    className="w-4 h-4"
+                  />
+                )}
                 {provider}
               </button>
             ))}

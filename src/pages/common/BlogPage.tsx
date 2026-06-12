@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock, User } from "lucide-react";
+import { ArrowRight, Clock, User, X } from "lucide-react";
 
 const posts = [
   { title: "10 Ways AI is Transforming Graphic Design in 2026", excerpt: "Discover how AI tools are revolutionizing the way designers work, from concept to final output.", img: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&h=250&fit=crop", author: "Jordan Miles", date: "Jun 10, 2026", readTime: "5 min", tag: "AI & Design" },
@@ -18,6 +19,8 @@ const tagColors: Record<string, string> = {
 };
 
 export default function BlogPage() {
+  const [readingPost, setReadingPost] = useState<typeof posts[0] | null>(null);
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4">
@@ -27,10 +30,13 @@ export default function BlogPage() {
         </div>
 
         {/* Featured Post */}
-        <div className="bg-card border border-border rounded-3xl overflow-hidden mb-8 group hover:shadow-card-hover transition-all cursor-pointer">
+        <div 
+          onClick={() => setReadingPost(posts[0])}
+          className="bg-card border border-border rounded-3xl overflow-hidden mb-8 group hover:shadow-card-hover transition-all cursor-pointer"
+        >
           <div className="md:flex">
-            <div className="md:w-1/2">
-              <img src={posts[0].img} alt={posts[0].title} className="w-full h-64 md:h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="md:w-1/2 overflow-hidden">
+              <img src={posts[0].img} alt={posts[0].title} className="w-full h-64 md:h-full object-cover group-hover:scale-102 transition-transform duration-500" />
             </div>
             <div className="md:w-1/2 p-8 flex flex-col justify-center">
               <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary-500/10 text-primary-500 mb-3 w-fit">Featured</span>
@@ -47,7 +53,11 @@ export default function BlogPage() {
         {/* Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts.slice(1).map((post) => (
-            <div key={post.title} className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-card-hover transition-all cursor-pointer">
+            <div 
+              key={post.title} 
+              onClick={() => setReadingPost(post)}
+              className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-card-hover transition-all cursor-pointer"
+            >
               <div className="overflow-hidden">
                 <img src={post.img} alt={post.title} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
@@ -64,6 +74,54 @@ export default function BlogPage() {
           ))}
         </div>
       </div>
+
+      {/* Blog Viewer Modal */}
+      {readingPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setReadingPost(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-lg bg-background/80"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <img src={readingPost.img} alt={readingPost.title} className="w-full h-64 object-cover rounded-xl mb-6" />
+            
+            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mb-3 ${tagColors[readingPost.tag] || "bg-primary-500/10 text-primary-500"}`}>{readingPost.tag}</span>
+            <h2 className="font-heading font-black text-2xl md:text-3xl mb-4">{readingPost.title}</h2>
+            
+            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6 border-b border-border pb-4">
+              <span className="flex items-center gap-1"><User className="w-4 h-4" /> {readingPost.author}</span>
+              <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {readingPost.readTime} read</span>
+              <span>Published: {readingPost.date}</span>
+            </div>
+            
+            <div className="space-y-4 text-muted-foreground leading-relaxed text-sm">
+              <p className="font-semibold text-foreground text-base">
+                {readingPost.excerpt}
+              </p>
+              <p>
+                PixiVisual is paving the way for the next generation of creative content production. By combining artificial intelligence with intuitive canvas layer editing, creators can transform ideas into polished visual assets at scale.
+              </p>
+              <p>
+                Our visual model pipelines are fine-tuned to preserve layout structure and typography settings, enabling seamless customization of aspect ratios, text fonts, color schemes, and vector assets.
+              </p>
+              <p>
+                Whether you are a startup branding lead, a freelance designer delivering logos, or a content creator scheduling posts on the calendar, PixiVisual provides a consolidated studio tools solution.
+              </p>
+            </div>
+            <div className="mt-8 flex justify-end">
+              <button 
+                onClick={() => setReadingPost(null)}
+                className="px-5 py-2.5 rounded-xl border border-border hover:bg-muted text-sm font-semibold transition-all"
+              >
+                Close Article
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

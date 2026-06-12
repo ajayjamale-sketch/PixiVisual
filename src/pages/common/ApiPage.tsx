@@ -18,6 +18,15 @@ const methodColor: Record<string, string> = {
 };
 
 export default function ApiPage() {
+  const copyCurl = () => {
+    const curlCmd = `curl -X POST https://api.pixivisual.ai/v1/generate/image \\
+-H "Authorization: Bearer YOUR_API_KEY" \\
+-H "Content-Type: application/json" \\
+-d '{"prompt": "A modern tech logo", "style": "minimal"}'`;
+    navigator.clipboard.writeText(curlCmd);
+    toast.success("API curl request copied to clipboard!");
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -37,7 +46,7 @@ export default function ApiPage() {
             <p className="ml-4 text-success">-d '{`{"prompt": "A modern tech logo", "style": "minimal"}`}'</p>
           </div>
           <button
-            onClick={() => toast.success("Copied to clipboard!")}
+            onClick={copyCurl}
             className="mt-3 flex items-center gap-1.5 text-xs text-primary-500 hover:underline"
           >
             <Copy className="w-3 h-3" /> Copy code
